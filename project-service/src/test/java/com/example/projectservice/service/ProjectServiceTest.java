@@ -1,7 +1,10 @@
 package com.example.projectservice.service;
 
 import com.example.projectservice.model.Project;
+import com.example.projectservice.repository.ProjectMemberRepository;
 import com.example.projectservice.repository.ProjectRepository;
+import com.example.projectservice.repository.ProjectTemplateRepository;
+import com.example.projectservice.repository.TaskRepository;
 import com.example.sharedlib.dto.ProjectDto;
 import com.example.sharedlib.enums.ProjectRole;
 import com.example.sharedlib.enums.ProjectStatus;
@@ -27,6 +30,12 @@ class ProjectServiceTest {
 
     @Mock
     private ProjectRepository projectRepository;
+    @Mock
+    private ProjectMemberRepository projectMemberRepository;
+    @Mock
+    private TaskRepository taskRepository;
+    @Mock
+    private ProjectTemplateRepository projectTemplateRepository;
     @Mock
     private ProjectMemberService projectMemberService;
     @Mock

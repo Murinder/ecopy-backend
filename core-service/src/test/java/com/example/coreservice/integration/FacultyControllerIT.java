@@ -18,6 +18,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -40,6 +41,9 @@ class FacultyControllerIT extends BaseIntegrationTest {
 
     @Autowired
     private FacultyRepository facultyRepository;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @MockBean
     private SearchService searchService;
@@ -64,7 +68,7 @@ class FacultyControllerIT extends BaseIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        facultyRepository.deleteAll();
+        jdbcTemplate.execute("TRUNCATE TABLE faculties CASCADE");
     }
 
     // ---- Create ----

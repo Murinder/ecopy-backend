@@ -194,13 +194,14 @@ class PortfolioControllerIT extends BaseIntegrationTest {
     @Test
     void searchBySkill_returnsMatchingSkills() throws Exception {
         Portfolio portfolio = createPortfolioInDb(USER_ID);
+        Portfolio secondPortfolio = createPortfolioInDb(UUID.randomUUID());
         skillRepository.save(PortfolioSkill.builder()
                 .portfolio(portfolio)
                 .name("Java")
                 .level(4)
                 .build());
         skillRepository.save(PortfolioSkill.builder()
-                .portfolio(portfolio)
+                .portfolio(secondPortfolio)
                 .name("Java")
                 .level(2)
                 .build());

@@ -15,6 +15,8 @@ import java.util.UUID;
 @Entity
 @Table(name = "project_members")
 @Data
+@EqualsAndHashCode(exclude = "project")
+@ToString(exclude = "project")
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder

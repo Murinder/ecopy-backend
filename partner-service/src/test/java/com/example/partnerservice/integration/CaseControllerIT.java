@@ -57,7 +57,7 @@ class CaseControllerIT extends BaseIntegrationTest {
                 .partnerId(testPartner.getId())
                 .title("ML Challenge")
                 .description("Build a classification model")
-                .difficulty("MEDIUM")
+                .difficulty("INTERMEDIATE")
                 .build();
 
         mockMvc.perform(TestSecurityHelper.withPartner(

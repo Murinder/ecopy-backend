@@ -3,6 +3,8 @@ package com.example.documentservice.model.entity;
 import com.example.documentservice.model.enums.PlaceholderType;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.io.Serializable;
 import java.util.UUID;
@@ -26,6 +28,7 @@ public class Placeholder {
     private String dataType;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "placeholder_type", nullable = false, columnDefinition = "placeholder_type")
     private PlaceholderType placeholderType;
 

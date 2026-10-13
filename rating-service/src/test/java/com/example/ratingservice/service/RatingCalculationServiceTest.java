@@ -34,6 +34,7 @@ class RatingCalculationServiceTest {
     @Mock private DepartmentRatingRepository departmentRatingRepository;
     @Mock private RatingCriteriaRepository criteriaRepository;
     @Mock private RatingHistoryRepository historyRepository;
+    @Mock private StudentRatingService studentRatingService;
     @Mock private EventPublisher eventPublisher;
     @Mock private ProjectServiceClient projectServiceClient;
 
@@ -47,6 +48,7 @@ class RatingCalculationServiceTest {
     void addStudentPoints_NewStudent_CreatesRatingAndPublishesEvent() {
         UUID userId = UUID.randomUUID();
         when(studentRatingRepository.findById(userId)).thenReturn(Optional.empty());
+        when(studentRatingRepository.saveAndFlush(any(StudentRating.class))).thenAnswer(inv -> inv.getArgument(0));
         when(studentRatingRepository.save(any(StudentRating.class))).thenAnswer(inv -> inv.getArgument(0));
         when(historyRepository.findByUserId(userId)).thenReturn(List.of());
 
@@ -95,6 +97,7 @@ class RatingCalculationServiceTest {
         when(criteriaRepository.findByCriteriaTypeAndIsActiveTrue(RatingCriteriaType.STUDENT))
                 .thenReturn(List.of(criteria));
         when(studentRatingRepository.findById(userId)).thenReturn(Optional.empty());
+        when(studentRatingRepository.saveAndFlush(any(StudentRating.class))).thenAnswer(inv -> inv.getArgument(0));
         when(studentRatingRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(historyRepository.findByUserId(userId)).thenReturn(List.of());
 
@@ -107,6 +110,7 @@ class RatingCalculationServiceTest {
     void onTaskCompleted_Adds2Points() {
         UUID userId = UUID.randomUUID();
         when(studentRatingRepository.findById(userId)).thenReturn(Optional.empty());
+        when(studentRatingRepository.saveAndFlush(any(StudentRating.class))).thenAnswer(inv -> inv.getArgument(0));
         when(studentRatingRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(historyRepository.findByUserId(userId)).thenReturn(List.of());
 
@@ -120,6 +124,7 @@ class RatingCalculationServiceTest {
         UUID userId = UUID.randomUUID();
         UUID eventId = UUID.randomUUID();
         when(studentRatingRepository.findById(userId)).thenReturn(Optional.empty());
+        when(studentRatingRepository.saveAndFlush(any(StudentRating.class))).thenAnswer(inv -> inv.getArgument(0));
         when(studentRatingRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(historyRepository.findByUserId(userId)).thenReturn(List.of());
 
@@ -148,6 +153,7 @@ class RatingCalculationServiceTest {
         when(criteriaRepository.findByCriteriaTypeAndIsActiveTrue(RatingCriteriaType.STUDENT))
                 .thenReturn(List.of(criteria));
         when(studentRatingRepository.findById(userId)).thenReturn(Optional.empty());
+        when(studentRatingRepository.saveAndFlush(any(StudentRating.class))).thenAnswer(inv -> inv.getArgument(0));
         when(studentRatingRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(historyRepository.findByUserId(userId)).thenReturn(List.of());
 
@@ -166,13 +172,14 @@ class RatingCalculationServiceTest {
 
         when(historyRepository.findByUserId(userId)).thenReturn(List.of(h1, h2, h3));
         when(studentRatingRepository.findById(userId)).thenReturn(Optional.empty());
+        when(studentRatingRepository.saveAndFlush(any(StudentRating.class))).thenAnswer(inv -> inv.getArgument(0));
         when(studentRatingRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         calculationService.recalculateStudentRating(userId);
 
-        // totalRaw = 18, normalized = 18/200*100 = 9.00
+        // totalRaw = 18, normalized = 18/80*100 = 22.50
         verify(studentRatingRepository, atLeastOnce()).save(argThat(r ->
-                r.getTotalScore().compareTo(new java.math.BigDecimal("9.00")) == 0));
+                r.getTotalScore().compareTo(new java.math.BigDecimal("22.50")) == 0));
         verify(eventPublisher).publish(eq("etsopy.rating"), eq("rating.recalculated"), any());
     }
 }

@@ -10,15 +10,22 @@ import com.example.eventservice.model.EventApplication;
 import com.example.eventservice.model.enums.ApplicationStatus;
 import com.example.eventservice.repository.EventApplicationRepository;
 import com.example.eventservice.repository.EventRepository;
+import com.example.eventservice.repository.TeamMemberRepository;
+import com.example.eventservice.repository.TeamRepository;
 import com.example.eventservice.service.impl.EventApplicationServiceImpl;
 import com.example.sharedlib.enums.EventFormat;
 import com.example.sharedlib.enums.EventStatus;
 import com.example.sharedlib.event.EventPublisher;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.OffsetDateTime;
 import java.util.Collections;
@@ -39,12 +46,32 @@ class EventApplicationServiceImplTest {
     @Mock
     private EventRepository eventRepository;
     @Mock
+    private TeamRepository teamRepository;
+    @Mock
+    private TeamMemberRepository teamMemberRepository;
+    @Mock
     private EventApplicationMapper applicationMapper;
     @Mock
     private EventPublisher eventPublisher;
+    @Mock
+    private UserNameCacheService userNameCacheService;
 
     @InjectMocks
     private EventApplicationServiceImpl applicationService;
+
+    @BeforeEach
+    void setUpSecurityContext() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(
+                        UUID.randomUUID().toString(),
+                        null,
+                        List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
+    }
+
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
 
     private Event buildEvent() {
         return Event.builder()
@@ -178,6 +205,8 @@ class EventApplicationServiceImplTest {
     @Test
     void deleteApplication_CallsRepositoryDeleteById() {
         UUID appId = UUID.randomUUID();
+        EventApplication application = buildApplication(appId, buildEvent(), UUID.randomUUID());
+        when(applicationRepository.findById(appId)).thenReturn(Optional.of(application));
 
         applicationService.deleteApplication(appId);
 

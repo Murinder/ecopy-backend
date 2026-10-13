@@ -1,7 +1,8 @@
+# syntax=docker/dockerfile:1
 FROM maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /app
 COPY . .
-RUN mvn clean package -pl shared-lib,analytics-service -am -DskipTests -B
+RUN --mount=type=cache,target=/root/.m2 mvn clean package -pl shared-lib,analytics-service -am -DskipTests -B
 
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app

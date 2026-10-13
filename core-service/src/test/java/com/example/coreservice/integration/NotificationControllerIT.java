@@ -58,8 +58,7 @@ class NotificationControllerIT extends BaseIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        jdbcTemplate.execute("DELETE FROM notifications");
-        userRepository.deleteAll();
+        jdbcTemplate.execute("TRUNCATE TABLE users CASCADE");
 
         testUser = userRepository.save(User.builder()
                 .email("notify-user@test.com")

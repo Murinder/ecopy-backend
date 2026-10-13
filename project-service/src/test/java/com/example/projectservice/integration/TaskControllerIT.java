@@ -2,12 +2,14 @@ package com.example.projectservice.integration;
 
 import com.example.projectservice.client.UserServiceClient;
 import com.example.projectservice.model.Project;
+import com.example.projectservice.model.ProjectMember;
 import com.example.projectservice.model.Task;
 import com.example.projectservice.repository.ProjectMemberRepository;
 import com.example.projectservice.repository.ProjectRepository;
 import com.example.projectservice.repository.TaskRepository;
 import com.example.sharedlib.dto.TaskDto;
 import com.example.sharedlib.enums.ProjectStatus;
+import com.example.sharedlib.enums.ProjectRole;
 import com.example.sharedlib.enums.TaskStatus;
 import com.example.sharedlib.storage.FileStorageService;
 import com.example.testsupport.BaseIntegrationTest;
@@ -69,6 +71,12 @@ class TaskControllerIT extends BaseIntegrationTest {
                 .description("desc")
                 .status(ProjectStatus.ACTIVE)
                 .createdBy(USER_ID)
+                .build());
+
+        projectMemberRepository.save(ProjectMember.builder()
+                .id(new ProjectMember.ProjectMemberId(testProject.getId(), USER_ID))
+                .project(testProject)
+                .role(ProjectRole.MEMBER)
                 .build());
     }
 

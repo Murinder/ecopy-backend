@@ -27,6 +27,7 @@ public class SecurityConfig {
                                 "/service-docs/**",
                                 "/webjars/**",
                                 "/actuator/**",
+                                "/fallback",
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/register",
                                 "/api/v1/auth/**",

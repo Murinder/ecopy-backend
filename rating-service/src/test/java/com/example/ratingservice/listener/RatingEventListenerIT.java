@@ -97,7 +97,7 @@ class RatingEventListenerIT extends BaseIntegrationTest {
     }
 
     @Test
-    void onAchievementAdded_Adds3Points() {
+    void onAchievementAdded_RecalculatesNormalizedRating() {
         UUID userId = UUID.randomUUID();
 
         // Pre-seed student rating
@@ -120,7 +120,7 @@ class RatingEventListenerIT extends BaseIntegrationTest {
 
         await().atMost(5, TimeUnit.SECONDS).untilAsserted(() -> {
             StudentRating rating = studentRatingRepository.findById(userId).orElseThrow();
-            assertThat(rating.getTotalScore()).isEqualByComparingTo(new BigDecimal("13.0"));
+            assertThat(rating.getTotalScore()).isEqualByComparingTo(new BigDecimal("3.75"));
         });
     }
 

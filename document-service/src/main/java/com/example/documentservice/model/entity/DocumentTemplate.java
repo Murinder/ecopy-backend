@@ -4,7 +4,9 @@ import com.example.documentservice.model.enums.DocumentType;
 import com.example.documentservice.model.enums.TemplateStatus;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UuidGenerator;
+import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -33,6 +35,7 @@ public class DocumentTemplate {
     private String filePath;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "document_type", nullable = false, columnDefinition = "document_type")
     private DocumentType documentType;
 
@@ -46,6 +49,7 @@ public class DocumentTemplate {
     private OffsetDateTime updatedAt;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "status", columnDefinition = "template_status")
     private TemplateStatus status;
 

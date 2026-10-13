@@ -20,6 +20,8 @@ import java.util.UUID;
         @Index(name = "idx_tasks_assigned_to", columnList = "assigned_to")
 })
 @Data
+@EqualsAndHashCode(exclude = "project")
+@ToString(exclude = "project")
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder

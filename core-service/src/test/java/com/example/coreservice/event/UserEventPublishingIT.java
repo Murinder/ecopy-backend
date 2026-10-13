@@ -4,7 +4,6 @@ import com.example.coreservice.dto.RegisterRequest;
 import com.example.coreservice.listener.NotificationEventListener;
 import com.example.coreservice.listener.ProjectEventListener;
 import com.example.coreservice.listener.SearchEventListener;
-import com.example.coreservice.repository.UserRepository;
 import com.example.coreservice.search.SearchableDocumentRepository;
 import com.example.coreservice.service.EmailService;
 import com.example.coreservice.service.SearchService;
@@ -21,6 +20,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -46,7 +46,7 @@ class UserEventPublishingIT extends BaseIntegrationTest {
     private RabbitTemplate rabbitTemplate;
 
     @Autowired
-    private UserRepository userRepository;
+    private JdbcTemplate jdbcTemplate;
 
     @MockBean
     private SearchService searchService;
@@ -76,7 +76,7 @@ class UserEventPublishingIT extends BaseIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        userRepository.deleteAll();
+        jdbcTemplate.execute("TRUNCATE TABLE users CASCADE");
         // Purge queues before test
         try {
             rabbitTemplate.execute(channel -> {

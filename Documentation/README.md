@@ -630,13 +630,14 @@ Refresh token содержит `sub`, `type=refresh`, `iat`, `exp`. По умо�
 | `MINIO_HOST`, `MINIO_PORT`, `MINIO_CONSOLE_PORT` | MinIO container/host mapping |
 | `MINIO_URL` | endpoint, реально читаемый сервисами |
 | `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY` | MinIO credentials |
-| `JWT_SECRET`, `JWT_EXPIRATION` | общая подпись и TTL access token |
+| `JWT_SECRET`, `JWT_EXPIRATION`, `JWT_REFRESH_EXPIRATION` | общая подпись и TTL access/refresh token |
+| `JWT_ISSUER_URI` | issuer URI из core OAuth2-конфигурации |
 | `EUREKA_URL` | `http://eureka-server:8761/eureka/` внутри compose |
 | `API_GATEWAY_PORT` | host port gateway |
 | `*_SERVICE_PORT` | host ports девяти доменных сервисов |
 | `GF_SECURITY_ADMIN_USER`, `GF_SECURITY_ADMIN_PASSWORD` | Grafana |
 | `SPRING_PROFILES_ACTIVE` | активный Spring profile, compose задаёт `docker` |
-| `JWT_ISSUER_URI` | упомянут в core OAuth2-конфигурации/production compose, но не входит в `.env.example` |
+| `REGISTRY_IMAGE`, `IMAGE_TAG` | адрес Registry и commit SHA; production deploy добавляет их в постоянный `.env` автоматически |
 
 Не используйте default `your-super-secret-jwt-key-change-in-production`: HS256 требует достаточно длинный случайный секрет, одинаковый для core и gateway.
 
@@ -758,7 +759,7 @@ Grafana datasource автоматически указывает на Prometheus
 - Дополнительные singleton containers подготовлены для Redis, Elasticsearch и MinIO.
 - Тестовые настройки находятся в `<service>/src/test/resources/application-test.yml`.
 
-Важная деталь: parent POM настраивает Surefire, но Maven Failsafe plugin и include для `*IT` отсутствуют. Стандартный `mvn verify` обычно не выбирает классы с суффиксом `IT`; их нужно запускать явно или подключить Failsafe.
+Parent POM настраивает Surefire для `*Test` и Failsafe для `*IT`. Команда `mvn verify` запускает оба набора; integration tests требуют доступный Docker daemon для Testcontainers.
 
 ### 15.3. Проверка Dockerfiles
 
@@ -768,22 +769,16 @@ Grafana datasource автоматически указывает на Prometheus
 
 GitLab pipeline содержит стадии:
 
-1. `build` — `mvn clean install -DskipTests`;
-2. `test:unit` — `mvn test`;
-3. `test:integration` — `mvn verify` с PostgreSQL/Redis/RabbitMQ services;
-4. `analyze` — SonarQube, допускается failure;
-5. `docker` — сборка и push образов;
-6. `deploy` — обновление `core-service` в Kubernetes dev/prod;
-7. scheduled cleanup Docker images.
+1. `verify` — полный `mvn clean verify`, включая `*Test` и `*IT` через Testcontainers;
+2. `analyze` — необязательный SonarQube-анализ при наличии `SONAR_HOST_URL` и `SONAR_TOKEN`;
+3. `images` — сборка и push одиннадцати application images с тегами commit SHA и `latest`;
+4. `deploy` — ручное production-развёртывание всего стека через Docker Compose.
 
 Каждый application Dockerfile — multi-stage Maven + Eclipse Temurin 17 JRE Alpine. JVM запускается с `-Xms128m -Xmx256m`.
 
-Текущие особенности pipeline:
+Dockerfiles собираются с context корня: `docker build -f <service>/Dockerfile .`. Production Compose использует образы `${CI_REGISTRY_IMAGE}/<service>:${CI_COMMIT_SHA}`, а не выполняет сборку на целевой VM. Job `deploy:production` закреплён за protected runner с тегом `etsopy-deploy`, сохраняет конфигурацию и точный SHA образов в `/srv/app/etsopy`, выполняет `docker compose up -d --wait` и проверяет gateway и регистрацию сервисов в Eureka.
 
-- Dockerfiles рассчитаны на build context корня, а `.gitlab-ci.yml` вызывает `docker build ... ./$service`; это не даёт Dockerfile доступа к `shared-lib` и root POM и требует исправления на `-f $service/Dockerfile .`.
-- integration job вызывает `verify`, но `*IT` без Failsafe может не запускаться.
-- Kubernetes deploy обновляет только `core-service`, а не весь набор сервисов.
-- `docker-compose.prod.yml` остаётся production-подобным Compose, а не Kubernetes manifests.
+Для deploy нужна protected file variable `ETSOPY_PROD_ENV` с production-значениями по образцу `.env.example`. Ветка по умолчанию должна быть protected; deploy запускается вручную. Внешний reverse proxy направляет `https://etsopy.kseoni.ch` на порт gateway `8080` и поддерживает WebSocket.
 
 ## 17. Соглашения для разработки
 
@@ -836,14 +831,11 @@ GitLab pipeline содержит стадии:
 10. **Нет transactional outbox.** Сохранение БД и публикация RabbitMQ не атомарны; часть publishers подавляет ошибки, поэтому событие может быть потеряно после успешной транзакции.
 11. **Event payloads слабо типизированы на стороне consumers.** Многие listeners принимают `Map<String,Object>`.
 12. **Часть queues не имеет consumer.** В конфигурации подготовлено больше bindings, чем обработчиков, например role-change, document notification и часть search/rating queues.
-13. **Integration tests не включены в lifecycle.** `*IT` требуют явного запуска или Failsafe.
-14. **GitLab Docker build context неверен для текущих Dockerfiles.** Compose использует правильный root context.
-15. **Production MinIO variables расходятся.** Приложения читают `MINIO_URL`, а production compose для core задаёт `MINIO_HOST`/`MINIO_PORT`; без URL сработает default `localhost:9000` внутри контейнера.
-16. **Zipkin только поднят.** Tracing exporter в сервисах не настроен.
-17. **Nginx не включён в compose.** Его конфигурация пока является заготовкой.
-18. **Root `src/` — неактивный остаток.** Текущий `pom.xml` имеет packaging `pom`, поэтому `DemoApplication` и root `application.yml` не входят ни в один запускаемый jar.
-19. **Три POM верхнего уровня.** Рабочая точка входа — `pom.xml`; сервисы наследуют `pom-parent.xml`; `pom-root.xml` выглядит историческим вариантом и может вводить в заблуждение.
-20. **Формат API неоднороден.** Часть контроллеров возвращает `ApiResponse<T>`, часть — DTO/списки напрямую.
+13. **Zipkin только поднят.** Tracing exporter в сервисах не настроен.
+14. **Nginx не включён в compose.** Его конфигурация пока является заготовкой; внешний TLS завершается на Nginx Proxy Manager.
+15. **Root `src/` — неактивный остаток.** Текущий `pom.xml` имеет packaging `pom`, поэтому `DemoApplication` и root `application.yml` не входят ни в один запускаемый jar.
+16. **Три POM верхнего уровня.** Рабочая точка входа — `pom.xml`; сервисы наследуют `pom-parent.xml`; `pom-root.xml` выглядит историческим вариантом и может вводить в заблуждение.
+17. **Формат API неоднороден.** Часть контроллеров возвращает `ApiResponse<T>`, часть — DTO/списки напрямую.
 
 ## 19. Быстрый маршрут по коду
 

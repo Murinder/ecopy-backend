@@ -54,6 +54,7 @@ public class EventServiceImpl implements EventService {
             throw new IllegalArgumentException("End date must be after start date");
         }
         Event event = eventMapper.toEntity(createEventDto);
+        event.setCreatedBy(UserContext.getCurrentUserId());
         if (event.getStatus() == null) {
             event.setStatus(com.example.sharedlib.enums.EventStatus.DRAFT);
         }

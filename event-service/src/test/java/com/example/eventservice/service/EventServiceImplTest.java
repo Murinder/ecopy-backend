@@ -11,11 +11,16 @@ import com.example.sharedlib.dto.EventDto;
 import com.example.sharedlib.enums.EventFormat;
 import com.example.sharedlib.enums.EventStatus;
 import com.example.sharedlib.event.EventPublisher;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.OffsetDateTime;
 import java.util.Collections;
@@ -40,6 +45,20 @@ class EventServiceImplTest {
 
     @InjectMocks
     private EventServiceImpl eventService;
+
+    @BeforeEach
+    void setUpSecurityContext() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(
+                        UUID.randomUUID().toString(),
+                        null,
+                        List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
+    }
+
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
 
     private Event buildEvent(UUID id, EventStatus status) {
         return Event.builder()
@@ -158,9 +177,11 @@ class EventServiceImplTest {
     @Test
     void deleteEvent_CallsRepositoryDeleteById() {
         UUID eventId = UUID.randomUUID();
+        Event event = buildEvent(eventId, EventStatus.DRAFT);
+        when(eventRepository.findById(eventId)).thenReturn(Optional.of(event));
 
         eventService.deleteEvent(eventId);
 
-        verify(eventRepository).deleteById(eventId);
+        verify(eventRepository).delete(event);
     }
 }

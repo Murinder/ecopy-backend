@@ -2,6 +2,7 @@ package com.example.projectservice.service;
 
 import com.example.projectservice.model.Project;
 import com.example.projectservice.model.Task;
+import com.example.projectservice.repository.ProjectMemberRepository;
 import com.example.projectservice.repository.TaskRepository;
 import com.example.sharedlib.dto.TaskDto;
 import com.example.sharedlib.enums.TaskStatus;
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -30,7 +32,13 @@ class TaskServiceTest {
     @Mock
     private ProjectService projectService;
     @Mock
+    private ProjectMemberRepository projectMemberRepository;
+    @Mock
     private EventPublisher eventPublisher;
+    @Mock
+    private RabbitTemplate rabbitTemplate;
+    @Mock
+    private UserNameCacheService userNameCacheService;
 
     @InjectMocks
     private TaskService taskService;

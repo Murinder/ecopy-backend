@@ -5,6 +5,7 @@ import com.example.documentservice.model.entity.DocumentTemplate;
 import com.example.documentservice.repository.DocumentTemplateRepository;
 import com.example.testsupport.BaseIntegrationTest;
 import com.example.testsupport.security.TestSecurityHelper;
+import com.example.sharedlib.storage.FileStorageService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -12,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.UUID;
@@ -32,6 +34,9 @@ class DocumentTemplateControllerIT extends BaseIntegrationTest {
 
     @Autowired
     private DocumentTemplateRepository templateRepository;
+
+    @MockBean
+    private FileStorageService fileStorageService;
 
     private final UUID adminId = UUID.randomUUID();
     private final UUID studentId = UUID.randomUUID();
@@ -83,6 +88,7 @@ class DocumentTemplateControllerIT extends BaseIntegrationTest {
     void getAllTemplates_Authenticated_Returns200() throws Exception {
         templateRepository.save(DocumentTemplate.builder()
                 .name("Template 1")
+                .filePath("document-templates/test/template-1")
                 .documentType(com.example.documentservice.model.enums.DocumentType.REPORT)
                 .createdBy(adminId)
                 .version(1)
@@ -100,6 +106,7 @@ class DocumentTemplateControllerIT extends BaseIntegrationTest {
     void getTemplateById_Existing_Returns200() throws Exception {
         DocumentTemplate saved = templateRepository.save(DocumentTemplate.builder()
                 .name("Specific Template")
+                .filePath("document-templates/test/specific")
                 .documentType(com.example.documentservice.model.enums.DocumentType.REPORT)
                 .createdBy(adminId)
                 .version(1)
@@ -120,9 +127,10 @@ class DocumentTemplateControllerIT extends BaseIntegrationTest {
     }
 
     @Test
-    void deleteTemplate_AsAdmin_Returns204() throws Exception {
+    void deleteTemplate_AsAdmin_Returns200() throws Exception {
         DocumentTemplate saved = templateRepository.save(DocumentTemplate.builder()
                 .name("To Delete")
+                .filePath("document-templates/test/to-delete")
                 .documentType(com.example.documentservice.model.enums.DocumentType.REPORT)
                 .createdBy(adminId)
                 .version(1)
@@ -131,7 +139,8 @@ class DocumentTemplateControllerIT extends BaseIntegrationTest {
 
         mockMvc.perform(TestSecurityHelper.withAdmin(
                         delete("/api/v1/document-templates/" + saved.getId()), adminId))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
 
         assertThat(templateRepository.count()).isEqualTo(0);
     }
@@ -140,6 +149,7 @@ class DocumentTemplateControllerIT extends BaseIntegrationTest {
     void deleteTemplate_AsStudent_Returns403() throws Exception {
         DocumentTemplate saved = templateRepository.save(DocumentTemplate.builder()
                 .name("Protected")
+                .filePath("document-templates/test/protected")
                 .documentType(com.example.documentservice.model.enums.DocumentType.REPORT)
                 .createdBy(adminId)
                 .version(1)

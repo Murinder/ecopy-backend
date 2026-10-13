@@ -53,7 +53,8 @@ class EventEventPublishingIT extends BaseIntegrationTest {
                 "title", "Spring Hackathon",
                 "description", "Annual Spring Boot hackathon",
                 "startDate", OffsetDateTime.now().plusDays(30).toString(),
-                "endDate", OffsetDateTime.now().plusDays(32).toString()
+                "endDate", OffsetDateTime.now().plusDays(32).toString(),
+                "format", "ONLINE"
         );
 
         mockMvc.perform(TestSecurityHelper.withLecturer(
@@ -77,7 +78,8 @@ class EventEventPublishingIT extends BaseIntegrationTest {
                 "title", "Notification Test Event",
                 "description", "Test",
                 "startDate", OffsetDateTime.now().plusDays(10).toString(),
-                "endDate", OffsetDateTime.now().plusDays(12).toString()
+                "endDate", OffsetDateTime.now().plusDays(12).toString(),
+                "format", "ONLINE"
         );
 
         mockMvc.perform(TestSecurityHelper.withLecturer(

@@ -3,6 +3,8 @@ package com.example.adminservice.model.entity;
 import com.example.adminservice.model.enums.SystemRole;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.io.Serializable;
 import java.time.OffsetDateTime;
@@ -35,6 +37,7 @@ public class UserRoleEntity {
         private UUID userId;
 
         @Enumerated(EnumType.STRING)
+        @JdbcTypeCode(SqlTypes.NAMED_ENUM)
         @Column(name = "role", nullable = false, columnDefinition = "system_role")
         private SystemRole role;
     }

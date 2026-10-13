@@ -4,6 +4,8 @@ import com.example.adminservice.model.enums.PermissionType;
 import com.example.adminservice.model.enums.SystemRole;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.io.Serializable;
 
@@ -19,6 +21,7 @@ public class RolePermission {
     private RolePermissionPK id;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "permission_type", nullable = false, columnDefinition = "permission_type")
     private PermissionType permissionType;
 
@@ -32,6 +35,7 @@ public class RolePermission {
     public static class RolePermissionPK implements Serializable {
 
         @Enumerated(EnumType.STRING)
+        @JdbcTypeCode(SqlTypes.NAMED_ENUM)
         @Column(name = "role", nullable = false, columnDefinition = "system_role")
         private SystemRole role;
 

@@ -28,15 +28,19 @@ public class RatingCriteria {
     private String description;
 
     @Column(precision = 5, scale = 2, nullable = false)
+    @Builder.Default
     private BigDecimal weight = BigDecimal.ONE;
 
     @Column(name = "is_active")
+    @Builder.Default
     private Boolean isActive = true;
 
     @Column(name = "created_at", nullable = false, updatable = false)
+    @Builder.Default
     private OffsetDateTime createdAt = OffsetDateTime.now();
 
     @Column(name = "updated_at")
+    @Builder.Default
     private OffsetDateTime updatedAt = OffsetDateTime.now();
 
     @Enumerated(EnumType.STRING)
@@ -45,6 +49,7 @@ public class RatingCriteria {
     private RatingCriteriaType criteriaType;
 
     @Column(name = "base_points", nullable = false)
+    @Builder.Default
     private Integer basePoints = 0;
 
     @Column(name = "max_points")

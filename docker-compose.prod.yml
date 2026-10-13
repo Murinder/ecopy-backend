@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # ==================== INFRASTRUCTURE ====================
 
@@ -146,9 +144,7 @@ services:
   # ==================== SERVICE DISCOVERY ====================
 
   eureka-server:
-    build:
-      context: .
-      dockerfile: eureka-server/Dockerfile
+    image: ${REGISTRY_IMAGE}/eureka-server:${IMAGE_TAG}
     container_name: etsopy-eureka-server
     ports:
       - "8761:8761"
@@ -159,7 +155,7 @@ services:
     networks:
       - etsopy-network
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8761/actuator/health || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8761/actuator/health/readiness || exit 1"]
       interval: 15s
       timeout: 10s
       start_period: 40s
@@ -169,9 +165,7 @@ services:
   # ==================== API GATEWAY ====================
 
   api-gateway:
-    build:
-      context: .
-      dockerfile: api-gateway/Dockerfile
+    image: ${REGISTRY_IMAGE}/api-gateway:${IMAGE_TAG}
     container_name: etsopy-api-gateway
     ports:
       - "${API_GATEWAY_PORT:-8080}:8080"
@@ -192,7 +186,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health/readiness || exit 1"]
       interval: 15s
       timeout: 10s
       start_period: 40s
@@ -202,9 +196,7 @@ services:
   # ==================== MICROSERVICES ====================
 
   core-service:
-    build:
-      context: .
-      dockerfile: core-service/Dockerfile
+    image: ${REGISTRY_IMAGE}/core-service:${IMAGE_TAG}
     container_name: etsopy-core-service
     ports:
       - "${CORE_SERVICE_PORT:-8001}:8001"
@@ -224,8 +216,7 @@ services:
       - ELASTICSEARCH_HOST=elasticsearch
       - ELASTICSEARCH_PORT=9200
       - ELASTICSEARCH_URL=http://elasticsearch:9200
-      - MINIO_HOST=minio
-      - MINIO_PORT=9000
+      - MINIO_URL=${MINIO_URL:-http://minio:9000}
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
       - EUREKA_URL=http://eureka-server:8761/eureka/
@@ -247,12 +238,16 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8001/actuator/health/readiness || exit 1"]
+      interval: 15s
+      timeout: 10s
+      start_period: 60s
+      retries: 10
     restart: unless-stopped
 
   project-service:
-    build:
-      context: .
-      dockerfile: project-service/Dockerfile
+    image: ${REGISTRY_IMAGE}/project-service:${IMAGE_TAG}
     container_name: etsopy-project-service
     ports:
       - "${PROJECT_SERVICE_PORT:-8002}:8002"
@@ -269,8 +264,7 @@ services:
       - RABBITMQ_PORT=5672
       - RABBITMQ_USERNAME=${RABBITMQ_USERNAME}
       - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD}
-      - MINIO_HOST=minio
-      - MINIO_PORT=9000
+      - MINIO_URL=${MINIO_URL:-http://minio:9000}
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
       - EUREKA_URL=http://eureka-server:8761/eureka/
@@ -289,12 +283,16 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8002/actuator/health/readiness || exit 1"]
+      interval: 15s
+      timeout: 10s
+      start_period: 60s
+      retries: 10
     restart: unless-stopped
 
   event-service:
-    build:
-      context: .
-      dockerfile: event-service/Dockerfile
+    image: ${REGISTRY_IMAGE}/event-service:${IMAGE_TAG}
     container_name: etsopy-event-service
     ports:
       - "${EVENT_SERVICE_PORT:-8003}:8003"
@@ -327,12 +325,16 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8003/actuator/health/readiness || exit 1"]
+      interval: 15s
+      timeout: 10s
+      start_period: 60s
+      retries: 10
     restart: unless-stopped
 
   portfolio-service:
-    build:
-      context: .
-      dockerfile: portfolio-service/Dockerfile
+    image: ${REGISTRY_IMAGE}/portfolio-service:${IMAGE_TAG}
     container_name: etsopy-portfolio-service
     ports:
       - "${PORTFOLIO_SERVICE_PORT:-8004}:8004"
@@ -365,12 +367,16 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8004/actuator/health/readiness || exit 1"]
+      interval: 15s
+      timeout: 10s
+      start_period: 60s
+      retries: 10
     restart: unless-stopped
 
   analytics-service:
-    build:
-      context: .
-      dockerfile: analytics-service/Dockerfile
+    image: ${REGISTRY_IMAGE}/analytics-service:${IMAGE_TAG}
     container_name: etsopy-analytics-service
     ports:
       - "${ANALYTICS_SERVICE_PORT:-8005}:8005"
@@ -403,12 +409,16 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8005/actuator/health/readiness || exit 1"]
+      interval: 15s
+      timeout: 10s
+      start_period: 60s
+      retries: 10
     restart: unless-stopped
 
   rating-service:
-    build:
-      context: .
-      dockerfile: rating-service/Dockerfile
+    image: ${REGISTRY_IMAGE}/rating-service:${IMAGE_TAG}
     container_name: etsopy-rating-service
     ports:
       - "${RATING_SERVICE_PORT:-8006}:8006"
@@ -441,12 +451,16 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8006/actuator/health/readiness || exit 1"]
+      interval: 15s
+      timeout: 10s
+      start_period: 60s
+      retries: 10
     restart: unless-stopped
 
   partner-service:
-    build:
-      context: .
-      dockerfile: partner-service/Dockerfile
+    image: ${REGISTRY_IMAGE}/partner-service:${IMAGE_TAG}
     container_name: etsopy-partner-service
     ports:
       - "${PARTNER_SERVICE_PORT:-8007}:8007"
@@ -479,12 +493,16 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8007/actuator/health/readiness || exit 1"]
+      interval: 15s
+      timeout: 10s
+      start_period: 60s
+      retries: 10
     restart: unless-stopped
 
   admin-service:
-    build:
-      context: .
-      dockerfile: admin-service/Dockerfile
+    image: ${REGISTRY_IMAGE}/admin-service:${IMAGE_TAG}
     container_name: etsopy-admin-service
     ports:
       - "${ADMIN_SERVICE_PORT:-8008}:8008"
@@ -517,12 +535,16 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8008/actuator/health/readiness || exit 1"]
+      interval: 15s
+      timeout: 10s
+      start_period: 60s
+      retries: 10
     restart: unless-stopped
 
   document-service:
-    build:
-      context: .
-      dockerfile: document-service/Dockerfile
+    image: ${REGISTRY_IMAGE}/document-service:${IMAGE_TAG}
     container_name: etsopy-document-service
     ports:
       - "${DOCUMENT_SERVICE_PORT:-8009}:8009"
@@ -539,8 +561,7 @@ services:
       - RABBITMQ_PORT=5672
       - RABBITMQ_USERNAME=${RABBITMQ_USERNAME}
       - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD}
-      - MINIO_HOST=minio
-      - MINIO_PORT=9000
+      - MINIO_URL=${MINIO_URL:-http://minio:9000}
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
       - EUREKA_URL=http://eureka-server:8761/eureka/
@@ -559,6 +580,12 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8009/actuator/health/readiness || exit 1"]
+      interval: 15s
+      timeout: 10s
+      start_period: 60s
+      retries: 10
     restart: unless-stopped
 
 volumes:

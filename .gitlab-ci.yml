@@ -1,152 +1,166 @@
 stages:
-  - build
-  - test
+  - verify
   - analyze
-  - docker
+  - images
   - deploy
 
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+
 variables:
-  DOCKER_REGISTRY: "registry.gitlab.com"
-  DOCKER_IMAGE: "$DOCKER_REGISTRY/$CI_PROJECT_PATH"
+  COMPOSE_PROJECT_NAME: "etsopy"
+  IMAGE_TAG: "$CI_COMMIT_SHA"
   MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
-  MAVEN_CLI_OPTS: "-s .m2/settings.xml --batch-mode"
+  DOCKER_BUILDKIT: "1"
+  BUILDX_NO_DEFAULT_ATTESTATIONS: "1"
 
-cache:
-  paths:
-    - .m2/repository
-    - node_modules
-
-# Build Stage
-build:maven:
-  stage: build
-  image: maven:3.8-openjdk-17
-  script:
-    - mvn clean install -DskipTests $MAVEN_CLI_OPTS
-  artifacts:
+verify:maven:
+  stage: verify
+  image: maven:3.9.9-eclipse-temurin-17
+  variables:
+    DOCKER_HOST: "unix:///var/run/docker.sock"
+  cache:
+    key: "maven-$CI_PROJECT_ID"
     paths:
-      - "*/target/*.jar"
-      - shared-lib/target/*.jar
-    expire_in: 1 day
-  only:
-    - merge_requests
-    - main
-    - develop
-
-# Test Stage
-test:unit:
-  stage: test
-  image: maven:3.8-openjdk-17
+      - .m2/repository/
   script:
-    - mvn test $MAVEN_CLI_OPTS
+    - mvn --batch-mode --no-transfer-progress clean verify
   artifacts:
+    when: always
     reports:
       junit:
         - "**/target/surefire-reports/TEST-*.xml"
-    paths:
-      - "**/target/site/jacoco/**"
-    expire_in: 30 days
-  only:
-    - merge_requests
-    - main
-    - develop
-
-test:integration:
-  stage: test
-  image: maven:3.8-openjdk-17
-  services:
-    - postgres:14
-    - redis:7
-    - rabbitmq:3.12-management
-  variables:
-    POSTGRES_DB: etsopy_test
-    POSTGRES_USER: postgres
-    POSTGRES_PASSWORD: postgres
-    REDIS_HOST: redis
-    RABBITMQ_HOST: rabbitmq
-  script:
-    - mvn verify $MAVEN_CLI_OPTS
-  artifacts:
-    reports:
-      junit:
         - "**/target/failsafe-reports/TEST-*.xml"
-  only:
-    - merge_requests
-    - main
-    - develop
+    expire_in: 30 days
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_COMMIT_BRANCH == "dev"'
 
-# Code Analysis
 analyze:sonarqube:
   stage: analyze
-  image: maven:3.8-openjdk-17
+  image: maven:3.9.9-eclipse-temurin-17
+  needs:
+    - verify:maven
+  cache:
+    key: "maven-$CI_PROJECT_ID"
+    paths:
+      - .m2/repository/
   script:
-    - mvn sonar:sonar -Dsonar.projectKey=$CI_PROJECT_NAME -Dsonar.sources=src/main/java -Dsonar.host.url=$SONAR_HOST_URL -Dsonar.login=$SONAR_LOGIN $MAVEN_CLI_OPTS
-  only:
-    - merge_requests
-    - main
-    - develop
+    - >-
+      mvn --batch-mode --no-transfer-progress -DskipTests package sonar:sonar
+      -Dsonar.projectKey="$CI_PROJECT_PATH_SLUG"
+      -Dsonar.host.url="$SONAR_HOST_URL"
+      -Dsonar.token="$SONAR_TOKEN"
   allow_failure: true
+  rules:
+    - if: '$SONAR_HOST_URL && $SONAR_TOKEN && ($CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH)'
 
-# Docker Build
-docker:build:
-  stage: docker
-  image: docker:latest
-  services:
-    - docker:dind
+images:publish:
+  stage: images
+  image: docker:29-cli
+  needs:
+    - verify:maven
   before_script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
   script:
     - |
-      for service in api-gateway core-service project-service event-service portfolio-service analytics-service rating-service partner-service admin-service document-service; do
-        if [ -d "$service" ]; then
-          docker build -t $DOCKER_IMAGE/$service:$CI_COMMIT_SHA -t $DOCKER_IMAGE/$service:latest ./$service
-          docker push $DOCKER_IMAGE/$service:$CI_COMMIT_SHA
-          docker push $DOCKER_IMAGE/$service:latest
-        fi
+      set -eu
+      services="eureka-server api-gateway core-service project-service event-service portfolio-service analytics-service rating-service partner-service admin-service document-service"
+      for service in $services; do
+        image="$CI_REGISTRY_IMAGE/$service"
+        docker build --pull --provenance=false -f "$service/Dockerfile" -t "$image:$CI_COMMIT_SHA" -t "$image:latest" .
+        docker push "$image:$CI_COMMIT_SHA"
+        docker push "$image:latest"
       done
-  only:
-    - main
-    - develop
+  after_script:
+    - docker logout "$CI_REGISTRY" || true
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
 
-# Deploy to Kubernetes
-deploy:k8s:dev:
+deploy:production:
   stage: deploy
-  image: bitnami/kubectl:latest
-  script:
-    - kubectl config use-context $KUBE_CONTEXT_DEV
-    - kubectl set image deployment/core-service-deployment core-service=$DOCKER_IMAGE/core-service:$CI_COMMIT_SHA -n default
-    - kubectl rollout status deployment/core-service-deployment -n default
-  environment:
-    name: development
-    kubernetes:
-      namespace: default
-  only:
-    - develop
-
-deploy:k8s:prod:
-  stage: deploy
-  image: bitnami/kubectl:latest
-  script:
-    - kubectl config use-context $KUBE_CONTEXT_PROD
-    - kubectl set image deployment/core-service-deployment core-service=$DOCKER_IMAGE/core-service:$CI_COMMIT_SHA -n production
-    - kubectl rollout status deployment/core-service-deployment -n production
+  tags:
+    - etsopy-deploy
+  needs:
+    - images:publish
+  resource_group: etsopy-production
   environment:
     name: production
-    kubernetes:
-      namespace: production
-  only:
-    - main
-  when: manual
-
-# Cleanup
-cleanup:docker:
-  stage: deploy
-  image: docker:latest
-  services:
-    - docker:dind
+    url: https://etsopy.kseoni.ch
+  variables:
+    DEPLOY_DIR: "/srv/app/etsopy"
   before_script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - test -n "$ETSOPY_PROD_ENV"
+    - test -f "$ETSOPY_PROD_ENV"
+    - |
+      set -eu
+      required="DB_USERNAME DB_PASSWORD RABBITMQ_USERNAME RABBITMQ_PASSWORD MINIO_ACCESS_KEY MINIO_SECRET_KEY JWT_SECRET JWT_EXPIRATION JWT_REFRESH_EXPIRATION JWT_ISSUER_URI GF_SECURITY_ADMIN_USER GF_SECURITY_ADMIN_PASSWORD"
+      for name in $required; do
+        grep -Eq "^${name}=.+$" "$ETSOPY_PROD_ENV" || {
+          echo "Missing required variable in ETSOPY_PROD_ENV: $name" >&2
+          exit 1
+        }
+      done
+      if grep -Eq '^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*=.*changeme_' "$ETSOPY_PROD_ENV"; then
+        echo "ETSOPY_PROD_ENV still contains changeme_* placeholders" >&2
+        exit 1
+      fi
+      jwt_secret=$(sed -n 's/^JWT_SECRET=//p' "$ETSOPY_PROD_ENV" | tail -n 1 | tr -d '\r')
+      if [ "${#jwt_secret}" -lt 32 ]; then
+        echo "JWT_SECRET must contain at least 32 characters" >&2
+        exit 1
+      fi
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
   script:
-    - docker image prune -a --force --filter "until=72h"
-  only:
-    - schedules
-
+    - install -d -m 700 "$DEPLOY_DIR"
+    - install -d -m 700 "$DEPLOY_DIR/infrastructure/docker/postgres"
+    - install -d -m 700 "$DEPLOY_DIR/infrastructure/docker/prometheus"
+    - install -d -m 700 "$DEPLOY_DIR/infrastructure/docker/grafana/provisioning"
+    - install -d -m 700 "$DEPLOY_DIR/infrastructure/docker/grafana/dashboards"
+    - |
+      set -eu
+      umask 077
+      temporary_env="$DEPLOY_DIR/.env.$CI_JOB_ID.tmp"
+      trap 'rm -f "$temporary_env"' EXIT
+      sed -e 's/\r$//' -e '/^REGISTRY_IMAGE=/d' -e '/^IMAGE_TAG=/d' "$ETSOPY_PROD_ENV" > "$temporary_env"
+      printf '\nREGISTRY_IMAGE=%s\nIMAGE_TAG=%s\n' "$CI_REGISTRY_IMAGE" "$CI_COMMIT_SHA" >> "$temporary_env"
+      chmod 600 "$temporary_env"
+      mv -f "$temporary_env" "$DEPLOY_DIR/.env"
+      trap - EXIT
+    - install -m 600 docker-compose.prod.yml "$DEPLOY_DIR/docker-compose.prod.yml"
+    - install -m 600 infrastructure/docker/postgres/init-databases.sql "$DEPLOY_DIR/infrastructure/docker/postgres/init-databases.sql"
+    - install -m 600 infrastructure/docker/prometheus/prometheus.yml "$DEPLOY_DIR/infrastructure/docker/prometheus/prometheus.yml"
+    - cp -R infrastructure/docker/grafana/provisioning/. "$DEPLOY_DIR/infrastructure/docker/grafana/provisioning/"
+    - cp -R infrastructure/docker/grafana/dashboards/. "$DEPLOY_DIR/infrastructure/docker/grafana/dashboards/"
+    - cd "$DEPLOY_DIR"
+    - docker compose -f docker-compose.prod.yml config --quiet
+    - docker compose -f docker-compose.prod.yml pull
+    - docker compose -f docker-compose.prod.yml up -d --wait --wait-timeout 600 --remove-orphans
+    - docker compose -f docker-compose.prod.yml ps
+    - curl --fail --silent --show-error --retry 12 --retry-all-errors --retry-delay 5 http://localhost:8080/actuator/health/readiness
+    - |
+      set -eu
+      expected="core-service project-service event-service portfolio-service analytics-service rating-service partner-service admin-service document-service"
+      for attempt in $(seq 1 30); do
+        registry=$(curl --fail --silent --show-error -H 'Accept: application/json' http://localhost:8761/eureka/apps || true)
+        missing=0
+        for service in $expected; do
+          echo "$registry" | grep -qi "\"name\":\"$service\"" || missing=1
+        done
+        if [ "$missing" -eq 0 ]; then
+          exit 0
+        fi
+        sleep 5
+      done
+      echo "Not all services registered in Eureka within 150 seconds" >&2
+      exit 1
+  after_script:
+    - docker logout "$CI_REGISTRY" || true
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      when: manual
+  allow_failure: false

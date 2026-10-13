@@ -2,11 +2,12 @@ package com.example.ratingservice.service;
 
 import com.example.ratingservice.dto.RatingHistoryDto;
 import com.example.ratingservice.dto.StudentRatingDto;
+import com.example.ratingservice.client.CoreServiceClient;
 import com.example.ratingservice.model.RatingHistory;
 import com.example.ratingservice.model.StudentRating;
+import com.example.ratingservice.repository.EarnedAchievementRepository;
 import com.example.ratingservice.repository.RatingHistoryRepository;
 import com.example.ratingservice.repository.StudentRatingRepository;
-import com.example.sharedlib.exception.ResourceNotFoundException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,6 +35,15 @@ class StudentRatingServiceTest {
 
     @Mock
     private RatingHistoryRepository historyRepository;
+
+    @Mock
+    private EarnedAchievementRepository earnedAchievementRepository;
+
+    @Mock
+    private CoreServiceClient coreServiceClient;
+
+    @Mock
+    private UserNameCacheService userNameCacheService;
 
     @Spy
     private ObjectMapper objectMapper = new ObjectMapper();
@@ -66,11 +76,16 @@ class StudentRatingServiceTest {
     }
 
     @Test
-    void getStudentRating_NonExistingUser_ThrowsResourceNotFoundException() {
+    void getStudentRating_NonExistingUser_ReturnsDefaultRating() {
         UUID userId = UUID.randomUUID();
         when(studentRatingRepository.findById(userId)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> studentRatingService.getStudentRating(userId));
+        StudentRatingDto result = studentRatingService.getStudentRating(userId);
+
+        assertEquals(userId, result.getUserId());
+        assertEquals(BigDecimal.ZERO, result.getTotalScore());
+        assertEquals(1, result.getSemester());
+        assertEquals("PENDING", result.getVerificationStatus());
     }
 
     @Test

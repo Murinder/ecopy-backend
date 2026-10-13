@@ -8,16 +8,22 @@ import com.example.eventservice.mapper.TeamMapper;
 import com.example.eventservice.model.Event;
 import com.example.eventservice.model.Team;
 import com.example.eventservice.repository.EventRepository;
+import com.example.eventservice.repository.TeamMemberRepository;
 import com.example.eventservice.repository.TeamRepository;
 import com.example.eventservice.service.impl.TeamServiceImpl;
 import com.example.sharedlib.enums.EventFormat;
 import com.example.sharedlib.enums.EventStatus;
 import com.example.sharedlib.event.EventPublisher;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.OffsetDateTime;
 import java.util.Collections;
@@ -38,12 +44,30 @@ class TeamServiceImplTest {
     @Mock
     private EventRepository eventRepository;
     @Mock
+    private TeamMemberRepository teamMemberRepository;
+    @Mock
     private TeamMapper teamMapper;
     @Mock
     private EventPublisher eventPublisher;
+    @Mock
+    private UserNameCacheService userNameCacheService;
 
     @InjectMocks
     private TeamServiceImpl teamService;
+
+    @BeforeEach
+    void setUpSecurityContext() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(
+                        UUID.randomUUID().toString(),
+                        null,
+                        List.of(new SimpleGrantedAuthority("ROLE_STUDENT"))));
+    }
+
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
 
     private Event buildEvent() {
         return Event.builder()

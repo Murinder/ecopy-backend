@@ -65,7 +65,7 @@ class SecurityRbacIT extends BaseIntegrationTest {
 
     @Test
     void actuator_IsPublic() throws Exception {
-        mockMvc.perform(get("/actuator/health"))
+        mockMvc.perform(get("/actuator/health/liveness"))
                 .andExpect(status().isOk());
     }
 

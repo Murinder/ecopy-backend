@@ -3,6 +3,7 @@ package com.example.projectservice.service;
 import com.example.projectservice.dto.ProjectTemplateDto;
 import com.example.projectservice.model.ProjectTemplate;
 import com.example.projectservice.repository.ProjectTemplateRepository;
+import com.example.sharedlib.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,7 +31,7 @@ public class ProjectTemplateService {
     public ProjectTemplateDto getTemplateById(UUID templateId) {
         return projectTemplateRepository.findById(templateId)
                 .map(this::toDto)
-                .orElseThrow(() -> new RuntimeException("Template not found")); // TODO: use custom exception
+                .orElseThrow(() -> new ResourceNotFoundException("Template not found"));
     }
 
     @Transactional(readOnly = true)

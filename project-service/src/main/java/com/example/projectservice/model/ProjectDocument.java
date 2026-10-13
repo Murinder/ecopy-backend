@@ -15,6 +15,8 @@ import java.util.UUID;
         @Index(name = "idx_project_documents_project_id", columnList = "project_id")
 })
 @Data
+@EqualsAndHashCode(exclude = "project")
+@ToString(exclude = "project")
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder

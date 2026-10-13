@@ -21,21 +21,26 @@ public class StudentRating {
     private UUID userId;
 
     @Column(name = "total_score", precision = 10, scale = 2)
+    @Builder.Default
     private BigDecimal totalScore = BigDecimal.ZERO;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "calculation_details", columnDefinition = "jsonb")
-    private String calculationDetails;
+    @Builder.Default
+    private String calculationDetails = "{}";
 
     @Column(name = "updated_at")
+    @Builder.Default
     private OffsetDateTime updatedAt = OffsetDateTime.now();
 
     @Column(name = "semester")
-    private Integer semester;
+    @Builder.Default
+    private Integer semester = 1;
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "verification_status", columnDefinition = "verification_status")
+    @Builder.Default
     private VerificationStatus verificationStatus = VerificationStatus.PENDING;
 
     @Column(name = "verified_by")

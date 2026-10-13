@@ -2,6 +2,8 @@ package com.example.portfolioservice.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
 import java.util.*;
@@ -23,6 +25,7 @@ public class Portfolio {
     @Column(name = "updated_at")
     private OffsetDateTime updatedAt = OffsetDateTime.now();
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "visibility_settings", columnDefinition = "jsonb")
     private String visibilitySettings;
 

@@ -41,8 +41,8 @@ class FallbackControllerIT {
     }
 
     @Test
-    void actuatorHealth_ReturnsUp() {
-        webTestClient.get().uri("/actuator/health")
+    void actuatorLiveness_ReturnsUp() {
+        webTestClient.get().uri("/actuator/health/liveness")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()

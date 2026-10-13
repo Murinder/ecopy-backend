@@ -27,6 +27,7 @@ public class AuditLog {
     private UUID userId;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "action", nullable = false, columnDefinition = "audit_action")
     private AuditAction action;
 

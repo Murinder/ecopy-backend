@@ -134,10 +134,10 @@ class ProjectTemplateControllerIT extends BaseIntegrationTest {
     }
 
     @Test
-    void getTemplateById_NotFound_Returns500() throws Exception {
+    void getTemplateById_NotFound_Returns404() throws Exception {
         mockMvc.perform(TestSecurityHelper.withStudent(
                         get("/api/v1/project-templates/" + UUID.randomUUID()),
                         STUDENT_ID))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isNotFound());
     }
 }

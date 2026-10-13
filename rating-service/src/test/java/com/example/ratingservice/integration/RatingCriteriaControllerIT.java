@@ -2,6 +2,7 @@ package com.example.ratingservice.integration;
 
 import com.example.ratingservice.dto.RatingCriteriaDto;
 import com.example.ratingservice.model.RatingCriteria;
+import com.example.ratingservice.model.RatingCriteriaType;
 import com.example.ratingservice.repository.RatingCriteriaRepository;
 import com.example.testsupport.BaseIntegrationTest;
 import com.example.testsupport.security.TestSecurityHelper;
@@ -12,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
@@ -34,12 +36,15 @@ class RatingCriteriaControllerIT extends BaseIntegrationTest {
     @Autowired
     private RatingCriteriaRepository criteriaRepository;
 
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
     private final UUID adminId = UUID.randomUUID();
     private final UUID studentId = UUID.randomUUID();
 
     @BeforeEach
     void setUp() {
-        criteriaRepository.deleteAll();
+        jdbcTemplate.execute("TRUNCATE TABLE rating_history, rating_criteria CASCADE");
     }
 
     @Test
@@ -48,6 +53,7 @@ class RatingCriteriaControllerIT extends BaseIntegrationTest {
                 .name("Project Completion")
                 .weight(new BigDecimal("1.5"))
                 .isActive(true)
+                .criteriaType(RatingCriteriaType.STUDENT)
                 .build());
 
         mockMvc.perform(TestSecurityHelper.withStudent(
@@ -63,6 +69,7 @@ class RatingCriteriaControllerIT extends BaseIntegrationTest {
                 .description("Points for completing tasks")
                 .weight(new BigDecimal("2.0"))
                 .isActive(true)
+                .criteriaType(RatingCriteriaType.STUDENT)
                 .build();
 
         mockMvc.perform(TestSecurityHelper.withAdmin(
@@ -80,6 +87,7 @@ class RatingCriteriaControllerIT extends BaseIntegrationTest {
         RatingCriteriaDto dto = RatingCriteriaDto.builder()
                 .name("Unauthorized")
                 .weight(new BigDecimal("1.0"))
+                .criteriaType(RatingCriteriaType.STUDENT)
                 .build();
 
         mockMvc.perform(TestSecurityHelper.withStudent(
@@ -98,12 +106,14 @@ class RatingCriteriaControllerIT extends BaseIntegrationTest {
                 .name("Old Name")
                 .weight(new BigDecimal("1.0"))
                 .isActive(true)
+                .criteriaType(RatingCriteriaType.STUDENT)
                 .build());
 
         RatingCriteriaDto updateDto = RatingCriteriaDto.builder()
                 .name("Updated Name")
                 .weight(new BigDecimal("3.0"))
                 .isActive(false)
+                .criteriaType(RatingCriteriaType.STUDENT)
                 .build();
 
         mockMvc.perform(TestSecurityHelper.withAdmin(

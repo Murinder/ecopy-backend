@@ -5,16 +5,23 @@ import com.example.eventservice.dto.TeamMemberDto;
 import com.example.eventservice.dto.UpdateTeamMemberDto;
 import com.example.eventservice.exception.ResourceNotFoundException;
 import com.example.eventservice.mapper.TeamMemberMapper;
+import com.example.eventservice.model.Event;
 import com.example.eventservice.model.Team;
 import com.example.eventservice.model.TeamMember;
+import com.example.eventservice.repository.EventApplicationRepository;
 import com.example.eventservice.repository.TeamMemberRepository;
 import com.example.eventservice.repository.TeamRepository;
 import com.example.eventservice.service.impl.TeamMemberServiceImpl;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.OffsetDateTime;
 import java.util.Collections;
@@ -34,9 +41,18 @@ class TeamMemberServiceImplTest {
     private TeamRepository teamRepository;
     @Mock
     private TeamMemberMapper teamMemberMapper;
+    @Mock
+    private EventApplicationRepository applicationRepository;
+    @Mock
+    private RabbitTemplate rabbitTemplate;
 
     @InjectMocks
     private TeamMemberServiceImpl teamMemberService;
+
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
 
     private TeamMember.TeamMemberId buildCompositeId(UUID teamId, UUID userId) {
         return new TeamMember.TeamMemberId(teamId, userId);
@@ -51,7 +67,12 @@ class TeamMemberServiceImplTest {
                 .userId(userId)
                 .role("member")
                 .build();
-        Team team = Team.builder().id(teamId).name("Alpha").createdBy(UUID.randomUUID()).build();
+        Team team = Team.builder()
+                .id(teamId)
+                .event(Event.builder().id(UUID.randomUUID()).build())
+                .name("Alpha")
+                .createdBy(UUID.randomUUID())
+                .build();
         TeamMember member = TeamMember.builder()
                 .id(buildCompositeId(teamId, userId))
                 .team(team)
@@ -155,13 +176,22 @@ class TeamMemberServiceImplTest {
     void deleteTeamMember_CallsRepositoryDeleteById() {
         UUID teamId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
+        UUID leaderId = UUID.randomUUID();
         TeamMember.TeamMemberId compositeId = buildCompositeId(teamId, userId);
+        Event event = Event.builder().id(UUID.randomUUID()).title("Hackathon").build();
+        Team team = Team.builder().id(teamId).event(event).name("Alpha").createdBy(leaderId).build();
+        TeamMember member = TeamMember.builder().id(compositeId).team(team).build();
 
-        when(teamMemberRepository.existsById(compositeId)).thenReturn(true);
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(
+                        leaderId.toString(),
+                        null,
+                        List.of(new SimpleGrantedAuthority("ROLE_STUDENT"))));
+        when(teamMemberRepository.findById(compositeId)).thenReturn(Optional.of(member));
 
         teamMemberService.deleteTeamMember(compositeId);
 
-        verify(teamMemberRepository).deleteById(compositeId);
+        verify(teamMemberRepository).delete(member);
     }
 
     @Test
@@ -170,7 +200,7 @@ class TeamMemberServiceImplTest {
         UUID userId = UUID.randomUUID();
         TeamMember.TeamMemberId compositeId = buildCompositeId(teamId, userId);
 
-        when(teamMemberRepository.existsById(compositeId)).thenReturn(false);
+        when(teamMemberRepository.findById(compositeId)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> teamMemberService.deleteTeamMember(compositeId));
     }

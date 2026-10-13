@@ -8,8 +8,7 @@ import org.testcontainers.containers.RabbitMQContainer;
 public final class RabbitMqTestContainer {
 
     private static final RabbitMQContainer CONTAINER =
-            new RabbitMQContainer("rabbitmq:3.12-management")
-                    .withReuse(true);
+            new RabbitMQContainer("rabbitmq:3.12-management");
 
     static {
         CONTAINER.start();

@@ -14,9 +14,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import com.example.sharedlib.security.AuthenticatedOnly;
 import com.example.sharedlib.security.LecturerOrAbove;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -38,11 +38,15 @@ public class ProjectController {
     /**
      * Создать новый проект
      */
-    @AuthenticatedOnly
+    @LecturerOrAbove
     @PostMapping
     @Operation(summary = "Создать новый проект", description = "Создает новый проект с указанными параметрами")
-    public ResponseEntity<ApiResponse<ProjectDto>> createProject(@RequestBody ProjectDto projectDto) {
+    public ResponseEntity<ApiResponse<ProjectDto>> createProject(
+            @RequestBody ProjectDto projectDto,
+            Authentication authentication) {
         log.info("Creating new project: {}", projectDto.getTitle());
+
+        projectDto.setCreatedBy(UUID.fromString(authentication.getName()));
 
         ProjectDto createdProject = projectService.createProject(projectDto);
 

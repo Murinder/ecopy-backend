@@ -35,6 +35,7 @@ public class ProjectTemplate {
     @Column(name = "template_type", nullable = false, columnDefinition = "template_type")
     private TemplateType templateType;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "JSONB")
     private String config;
 

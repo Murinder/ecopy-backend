@@ -5,7 +5,9 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UuidGenerator;
 import org.hibernate.type.SqlTypes;
@@ -23,6 +25,8 @@ import java.util.*;
         @Index(name = "idx_projects_status", columnList = "status")
 })
 @Data
+@EqualsAndHashCode(exclude = {"members", "tasks", "documents"})
+@ToString(exclude = {"members", "tasks", "documents"})
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder

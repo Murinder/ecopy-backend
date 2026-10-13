@@ -44,17 +44,22 @@ class StudentRatingControllerIT extends BaseIntegrationTest {
                 .updatedAt(OffsetDateTime.now())
                 .build());
 
-        mockMvc.perform(TestSecurityHelper.withStudent(
+                mockMvc.perform(TestSecurityHelper.withStudent(
                         get("/api/v1/ratings/students/" + studentId), requesterId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.userId").value(studentId.toString()));
+                .andExpect(jsonPath("$.data.userId").value(studentId.toString()));
     }
 
     @Test
-    void getStudentRating_NonExistentStudent_Returns404() throws Exception {
-        mockMvc.perform(TestSecurityHelper.withStudent(
-                        get("/api/v1/ratings/students/" + UUID.randomUUID()), requesterId))
-                .andExpect(status().isNotFound());
+    void getStudentRating_NonExistentStudent_ReturnsDefaultRating() throws Exception {
+        UUID unknownUserId = UUID.randomUUID();
+
+                mockMvc.perform(TestSecurityHelper.withStudent(
+                        get("/api/v1/ratings/students/" + unknownUserId), requesterId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.userId").value(unknownUserId.toString()))
+                .andExpect(jsonPath("$.data.totalScore").value(0))
+                .andExpect(jsonPath("$.data.verificationStatus").value("PENDING"));
     }
 
     @Test
@@ -70,10 +75,10 @@ class StudentRatingControllerIT extends BaseIntegrationTest {
                 .updatedAt(OffsetDateTime.now())
                 .build());
 
-        mockMvc.perform(TestSecurityHelper.withStudent(
+                mockMvc.perform(TestSecurityHelper.withStudent(
                         get("/api/v1/ratings/students/top").param("limit", "10"), requesterId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2));
+                .andExpect(jsonPath("$.data.length()").value(2));
     }
 
     @Test
